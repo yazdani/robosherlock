@@ -83,7 +83,40 @@
           <description/>
           <rangeTypeName>uima.cas.StringArray</rangeTypeName>
         </featureDescription>
+
+        <featureDescription>
+          <name>annotationsBuffer</name>
+          <description/>
+          <rangeTypeName>uima.cas.FSArray</rangeTypeName>
+          <elementType>rs.core.Annotation</elementType>
+          <multipleReferencesAllowed>true</multipleReferencesAllowed>
+        </featureDescription>
+
       </features>
     </typeDescription>
+
+    <typeDescription>
+      <name>rs.scene.Buffer</name>
+      <description>Buffer object for past annotation. Used to "remember" past annotation from the same source</description>
+      <supertypeName>uima.cas.TOP</supertypeName>
+      <features>
+
+        <featureDescription>
+          <name>source</name>
+          <description/>
+          <rangeTypeName>uima.cas.String</rangeTypeName>
+        </featureDescription>
+
+        <featureDescription>
+          <name>annotationsBuffer</name>
+          <description/>
+          <rangeTypeName>uima.cas.FSArray</rangeTypeName>
+          <elementType>rs.core.Annotation</elementType>
+          <multipleReferencesAllowed>true</multipleReferencesAllowed>
+        </featureDescription>
+
+      </features>
+    </typeDescription>
+
   </types>
 </typeSystemDescription>
