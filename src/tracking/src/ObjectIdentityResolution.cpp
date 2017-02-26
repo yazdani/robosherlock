@@ -90,7 +90,8 @@ private:
   }
 
 public:
-  ObjectIdentityResolution() : DrawingAnnotator(__func__), host(DB_HOST), db(DB_NAME), invalid(-1, -1, -1, -1), removeObjects(true), maxDifference(0.2), fastMatchThreshold(0.4), lastTimestamp(0)
+  ObjectIdentityResolution() : DrawingAnnotator(__func__), host(DB_HOST), db(DB_NAME), invalid(-1, -1, -1, -1),
+    removeObjects(true), maxDifference(0.2), fastMatchThreshold(0.4), lastTimestamp(0)
   {
     //vecMatch.push_back(matchEntry(&matchAnnotation<rs::PoseAnnotation>, 1.0));
     //vecMatch.push_back(matchEntry(&matchAnnotation<rs::TFLocation>,     0.25));

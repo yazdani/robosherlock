@@ -88,7 +88,7 @@
           <name>annotationsBuffer</name>
           <description/>
           <rangeTypeName>uima.cas.FSArray</rangeTypeName>
-          <elementType>rs.core.Annotation</elementType>
+          <elementType>rs.scene.Buffer</elementType>
           <multipleReferencesAllowed>true</multipleReferencesAllowed>
         </featureDescription>
 
@@ -108,7 +108,7 @@
         </featureDescription>
 
         <featureDescription>
-          <name>annotationsBuffer</name>
+          <name>annotations</name>
           <description/>
           <rangeTypeName>uima.cas.FSArray</rangeTypeName>
           <elementType>rs.core.Annotation</elementType>
