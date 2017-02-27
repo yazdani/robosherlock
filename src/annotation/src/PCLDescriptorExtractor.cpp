@@ -36,6 +36,7 @@
 //PCL
 #include <pcl/point_types.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/search/impl/kdtree.hpp>
 
 #include <pcl/features/vfh.h>
 #include <pcl/features/cvfh.h>

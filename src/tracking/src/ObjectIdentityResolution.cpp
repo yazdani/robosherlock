@@ -19,7 +19,8 @@
 #include <map>
 #include <vector>
 #include <tuple>
-
+#include <queue>
+#include <iterator>
 // UIMA
 #include <uima/api.hpp>
 
@@ -40,12 +41,88 @@
 
 using namespace uima;
 
+template <typename T> class Buffer
+{
+
+private:
+  std::vector<T> vec;
+  int MAX_ELEM;
+  int elemCount_;
+
+public:
+  typedef typename std::vector<T>::iterator iterator;
+  typedef typename std::vector<T>::const_iterator const_iterator;
+  iterator begin()
+  {
+    return vec.begin();
+  }
+  iterator end()
+  {
+    return vec.end();
+  }
+
+  Buffer(): MAX_ELEM(10), elemCount_(0)
+  {
+  }
+  Buffer(int max_elem): elemCount_(0)
+  {
+    MAX_ELEM = max_elem;
+  }
+  void insert_front(T elem)
+  {
+    vec.insert(vec.begin(), elem);
+    if(vec.size() > MAX_ELEM)
+    {
+      vec.pop_back();
+    }
+  }
+
+};
+
+class AnnotationHitory
+{
+
+private:
+  std::map<std::string, Buffer<std::string>> keyToValues_;
+
+
+public:
+  void addValue(std::string k, std::string v)
+  {
+    keyToValues_[k].insert_front(v);
+  }
+
+  std::vector<std::string> getKeys()
+  {
+    std::vector<std::string> keys;
+    for(auto keyListPair : keyToValues_)
+    {
+      keys.push_back(keyListPair.first);
+    }
+    return keys;
+  }
+
+  std::map<std::string, int> getHist(std::string s)
+  {
+    std::map<std::string, int> counter;
+    for(auto val : keyToValues_[s])
+    {
+      counter[val]++;
+    }
+    return counter;
+  }
+};
+
+
 class ObjectIdentityResolution : public DrawingAnnotator
 {
 private:
+
   typedef double(*matchFunction)(rs::Cluster &cluster, rs::Object &object, double &factor);
   typedef std::tuple<matchFunction, double> matchEntry;
   std::vector<matchEntry> vecMatch;
+
+  std::map<std::string, AnnotationHitory> objIDToHist_;
 
   std::string host;
   std::string db;
@@ -96,8 +173,10 @@ public:
     //vecMatch.push_back(matchEntry(&matchAnnotation<rs::PoseAnnotation>, 1.0));
     //vecMatch.push_back(matchEntry(&matchAnnotation<rs::TFLocation>,     0.25));
     //vecMatch.push_back(matchEntry(&matchAnnotation<rs::Shape>,          1.0));
-    vecMatch.push_back(matchEntry(&matchAnnotation<rs::Geometry>,       1.0));
+
     //vecMatch.push_back(matchEntry(&matchAnnotation<rs::SemanticColor>,  1.0));
+
+    vecMatch.push_back(matchEntry(&matchAnnotation<rs::Geometry>,       1.0));
     vecMatch.push_back(matchEntry(&matchAnnotation<rs::ColorHistogram>, 1.0));
     vecMatch.push_back(matchEntry(&matchAnnotation<rs::Features>,       1.0));
     vecMatch.push_back(matchEntry(&matchAnnotation<rs::PclFeature>,     1.0));
@@ -275,9 +354,25 @@ private:
       object.disappeared(object.inView() && object.lastSeen() != timestamp);
     }
 
+    for(auto & objHistory : objIDToHist_)
+    {
+      outInfo("ObjID: " << objHistory.first);
+
+      std::vector<std::string> keys = objHistory.second.getKeys();
+      for(const std::string & k : keys)
+      {
+        std::map<std::string, int> hists = objHistory.second.getHist(std::string(k));
+        outInfo("   Property: "<<k);
+        for(auto h : hists)
+        {
+          outInfo("      " << h.first << " : " << h.second);
+        }
+      }
+    }
     cas.set(VIEW_OBJECTS, objects);
   }
 
+  //do a fast matching..a quick verification of the beliefs that we have
   void matchFast(std::vector<rs::Object> &objects, std::vector<rs::Cluster> &clusters, std::vector<int> &clustersToObject, std::vector<int> &objectsToCluster)
   {
     std::vector<double> bestDists(clusters.size(), 0);
@@ -299,7 +394,7 @@ private:
       {
         if(location.reference_desc() == "on" && !(location.frame_id() == "plane" || location.frame_id() == "drawer"))
         {
-          outDebug("skipping object " << i << " because it is not located on a plane or inside a drawer.");
+          outInfo("skipping object " << i << " because it is not located on a plane or inside a drawer.");
           continue;
         }
       }
@@ -456,6 +551,27 @@ private:
       object.rois(cluster.rois());
     }
 
+    std::vector<rs::Shape> shapes;
+    std::vector<rs::SemanticSize> sizes;
+    std::vector<rs::Detection> detections;
+
+    cluster.annotations.filter(shapes);
+    cluster.annotations.filter(sizes);
+    cluster.annotations.filter(detections);
+
+    for(auto & s : shapes)
+    {
+      objIDToHist_[object.id()].addValue("shape", s.shape());
+    }
+    for(auto & s : sizes)
+    {
+      objIDToHist_[object.id()].addValue("size", s.size());
+    }
+    for(auto & d : detections)
+    {
+      objIDToHist_[object.id()].addValue("detection", d.name());
+    }
+
     return object;
   }
 
@@ -549,6 +665,9 @@ private:
     return db.str();
   }
 
+  /*
+   * Get the typename of an annotation
+   * */
   std::string getTypeName(rs::Annotation &annotation)
   {
     FeatureStructure &fs = (FeatureStructure &)annotation;
@@ -567,12 +686,37 @@ private:
     }
   }
 
+
+  /* *
+   * Merge Object Hypotheses to an existing object in the belief state
+   * */
   void mergeClusterWithObjects(rs::Cluster &cluster, rs::Object &object)
   {
     std::set<std::string> newAnnotations;
     std::vector<rs::Annotation> annotationsC = cluster.annotations();
     std::vector<rs::Annotation> annotationsO = object.annotations();
     object.annotations.allocate();
+
+
+    std::vector<rs::Shape> shapes;
+    std::vector<rs::SemanticSize> sizes;
+    std::vector<rs::Detection> detections;
+    cluster.annotations.filter(shapes);
+    cluster.annotations.filter(sizes);
+    cluster.annotations.filter(detections);
+
+    for(auto & s : shapes)
+    {
+      objIDToHist_[object.id()].addValue("shape", s.shape());
+    }
+    for(auto & s : sizes)
+    {
+      objIDToHist_[object.id()].addValue("size", s.size());
+    }
+    for(auto & d : detections)
+    {
+      objIDToHist_[object.id()].addValue("detection", d.name());
+    }
 
     for(size_t i = 0; i < annotationsC.size(); ++i)
     {
