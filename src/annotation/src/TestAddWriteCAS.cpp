@@ -55,7 +55,7 @@ public:
     //now the same with an Identifiable
     rs::Identifiable ident = rs::create<rs::Identifiable>(tcas);
     ident.id.set("foobar");
-    cas.set("IDENT", query);
+    cas.set("IDENT", ident);
 
     //get back the same thing from the CAS
     rs::Identifiable identOut = rs::create<rs::Identifiable>(tcas);
@@ -65,7 +65,23 @@ public:
     }
     else
     {
-      outWarn("QUERY does not exist in CAS");
+      outWarn("IDENT does not exist in CAS");
+    }
+
+    //now the same with an Identifiable
+    rs::Annotation anno = rs::create<rs::Annotation>(tcas);
+    anno.source.set("foobar");
+    cas.set("ANNO", anno);
+
+    //get back the same thing from the CAS
+    rs::Annotation annoOut = rs::create<rs::Annotation>(tcas);
+    if(cas.get("ANNO", annoOut))
+    {
+      outInfo("Got: " << annoOut.source());
+    }
+    else
+    {
+      outWarn("ANNO does not exist in CAS");
     }
 
     return UIMA_ERR_NONE;
